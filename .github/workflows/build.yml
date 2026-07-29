@@ -1,10 +1,16 @@
-name: Build APK
-on: [push, workflow_dispatch]
+name: Build & Release APK
+on: 
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
 
-# Cancel running builds if a new push comes in on the same branch
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+# Grant permissions so the workflow can publish to the Releases tab
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -29,8 +35,14 @@ jobs:
       - name: Build Debug APK
         run: gradle assembleDebug --stacktrace
 
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: app-debug
-          path: "**/build/outputs/apk/debug/*.apk"
+          tag_name: "latest-build"
+          name: "Latest Build (Nightly)"
+          body: "Automatically built APK from the latest commit."
+          draft: false
+          prerelease: false
+          files: "**/build/outputs/apk/debug/*.apk"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
